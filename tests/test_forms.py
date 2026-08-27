@@ -3,7 +3,11 @@
 
 """Tests for user profile forms."""
 
+import pytest
+from werkzeug.datastructures import MultiDict
+
 from invenio_userprofiles.forms import (
+    ProfileForm,
     _update_with_csrf_disabled,
     confirm_register_form_factory,
     confirm_register_form_preferences_factory,
@@ -120,3 +124,27 @@ def _get_form(app, parent_form, factory_method, force_disable_csrf=False):
         rf.validate()
 
         return rf
+
+
+@pytest.mark.parametrize(
+    "validates, form_input",
+    [
+        (True, "Normal Full Name"),
+        (True, "John Mr.Some"),
+        (True, "ŁČĐЯΟ李"),
+        (False, "<script>alert(1)</script>"),
+        (False, 'Please visit <a href="http://evil.com/" rel="nofollow">evil.com</a>'),
+        (False, "{@}"),
+    ],
+)
+def test_profile_form_full_name_validation(app, validates, form_input):
+    with app.test_request_context():
+        form = ProfileForm(
+            formdata=MultiDict({"username": "test_username", "full_name": form_input}),
+            meta={"csrf": False},
+        )
+        assert "pattern" in form.full_name.__html__()  # Browser validation
+        if validates:
+            assert form.validate()
+        else:
+            assert not form.validate()

@@ -21,6 +21,7 @@ from wtforms.validators import (
     DataRequired,
     EqualTo,
     Length,
+    Regexp,
     StopValidation,
     ValidationError,
 )
@@ -58,8 +59,15 @@ class ProfileForm(FlaskForm):
     full_name = StringField(
         # NOTE: Form label
         _("Full name"),
-        validators=[Length(max=255)],
+        validators=[
+            Length(max=255),
+            Regexp(regex=r"^[^<>{}\/@]+$", message=_("No special characters allowed.")),
+        ],
         filters=[strip_filter],
+        render_kw={
+            "pattern": r"^[^<>\{\}\/@]+$",
+            "title": _("No special characters allowed."),
+        },
     )
 
     affiliations = StringField(
